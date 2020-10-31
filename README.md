@@ -1,0 +1,1 @@
+PoC App for pyqt-based xliff editor
