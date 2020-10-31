@@ -30,7 +30,7 @@ class TagTextEdit(QTextEdit):
     def __init__(self, parent=None):
         super(TagTextEdit, self).__init__(parent)
         self.setAcceptRichText(True)
-        # self.setStyleSheet('line-height: 120%;')
+        self.setStyleSheet('font-family: Helvetica,Arial,sans-serif;')
 
     def createMimeDataFromSelection(self) -> QtCore.QMimeData:
         mime = QMimeData()
