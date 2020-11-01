@@ -3,7 +3,7 @@ from enum import Enum, auto
 import uuid
 import pyperclip
 from PyQt5 import QtCore
-from PyQt5.QtGui import QPen, QColor, QBrush, QLinearGradient, QPainter, QPainterPath
+from PyQt5.QtGui import QPen, QColor, QBrush, QLinearGradient, QPainter, QPainterPath, QTextOption
 from PyQt5.QtGui import QTextCursor
 from PyQt5.QtGui import QTextFormat
 from PyQt5.QtGui import QTextCharFormat
@@ -16,7 +16,9 @@ from PyQt5.QtWidgets import QTextEdit
 from PyQt5.QtWidgets import QVBoxLayout
 from PyQt5.QtWidgets import QApplication
 
+
 OBJECT_REPLACEMENT_CHARACTER = 0xfffc
+LINE_SEPARATOR = 0x2028
 PARAGRAPH_SEPARATOR = 0x2029
 
 
@@ -30,8 +32,13 @@ class TagTextEdit(QTextEdit):
     def __init__(self, parent=None):
         super(TagTextEdit, self).__init__(parent)
         self.setAcceptRichText(True)
-        self.setStyleSheet('font-family: Helvetica,Arial,sans-serif;')
+        self.setStyleSheet(
+            'font-family: Arial')
+        option = QTextOption()
+        option.setFlags(QTextOption.ShowTabsAndSpaces | QTextOption.ShowLineAndParagraphSeparators)
+        self.document().setDefaultTextOption(option)
 
+    # Called when a drag and drop operation is started, or when data is copied to the clipboard.
     def createMimeDataFromSelection(self) -> QtCore.QMimeData:
         mime = QMimeData()
         cursor = self.textCursor()
@@ -57,7 +64,7 @@ class TagTextEdit(QTextEdit):
                         substrings.append(TagTextObject.to_string(char_format))
                         break
                     it += 1
-            elif ord(char) == PARAGRAPH_SEPARATOR:
+            elif ord(char) in (LINE_SEPARATOR, PARAGRAPH_SEPARATOR):
                 substrings.append('\n')
             else:
                 substrings.append(char)
@@ -184,15 +191,22 @@ class KeyEventFilter(QObject):
     def eventFilter(self, obj: 'QObject', event: 'QEvent') -> bool:
         # print('eventFilter', event.type())
         if obj == self.widget and event.type() == QEvent.KeyPress:
+            # print(event.key())
             modifiers = QApplication.keyboardModifiers()
-            if modifiers == QtCore.Qt.ControlModifier and event.key() == Qt.Key_C:
-                print('ctrl+c')
-                obj.copy_selection_to_clipboard()
+            if modifiers != QtCore.Qt.ShiftModifier and event.key() == Qt.Key_Return:
                 return True
-            if modifiers == QtCore.Qt.ControlModifier and event.key() == Qt.Key_X:
-                print('ctrl+x')
-                obj.copy_selection_to_clipboard(cut=True)
+            if modifiers == QtCore.Qt.ShiftModifier and event.key() == Qt.Key_Enter:
+                self.widget.insertText(chr(LINE_SEPARATOR))
                 return True
+            # modifiers = QApplication.keyboardModifiers()
+            # if modifiers == QtCore.Qt.ControlModifier and event.key() == Qt.Key_C:
+            #     print('ctrl+c')
+            #     obj.copy_selection_to_clipboard()
+            #     return True
+            # if modifiers == QtCore.Qt.ControlModifier and event.key() == Qt.Key_X:
+            #     print('ctrl+x')
+            #     obj.copy_selection_to_clipboard(cut=True)
+            #     return True
         return QObject.eventFilter(self, obj, event)
 
 
@@ -238,7 +252,7 @@ class ExampleWindow(QWidget):
         cursor = self.tageditor.textCursor()
 
         self.insert_tag(cursor, '1', 'image', TagKind.EMPTY)
-        cursor.insertText('start\n')
+        cursor.insertText('start' + chr(LINE_SEPARATOR))
 
         cursor.insertText('\n\n')
         self.insert_tag(cursor, '1', 'bold', TagKind.START)
@@ -285,9 +299,10 @@ class ExampleWindow(QWidget):
         cursor.insertText(chr(OBJECT_REPLACEMENT_CHARACTER), char_format)
 
     def on_text_changed(self):
-        self.tageditor.textCursor().beginEditBlock()
         blocked = self.tageditor.blockSignals(True)
+        self.tageditor.textCursor().beginEditBlock()
         doc = self.tageditor.document()
+        # doc.setPlainText(doc.toPlainText().replace(chr(0xa), chr(LINE_SEPARATOR)))
         pattern = QtCore.QRegExp(r'\{\d{1,2}\}|\{\d{1,2}>|<\d{1,2}\}')
         cursor = QTextCursor(doc)
         while True:
@@ -301,7 +316,7 @@ class ExampleWindow(QWidget):
             elif matched_str.startswith('<'):
                 tag_name = cursor.selectedText().strip('<}')
                 self.insert_tag(cursor, tag_name, tag_name, TagKind.END)
-            else:
+            elif matched_str.startswith('{'):
                 tag_name = cursor.selectedText().strip('{}')
                 self.insert_tag(cursor, tag_name, tag_name, TagKind.EMPTY)
 
