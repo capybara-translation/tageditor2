@@ -32,8 +32,8 @@ class TagTextEdit(QTextEdit):
     def __init__(self, parent=None):
         super(TagTextEdit, self).__init__(parent)
         self.setAcceptRichText(True)
-        self.setStyleSheet(
-            'font-family: Arial')
+        # self.setStyleSheet(
+        #     'font-family: Arial')
         option = QTextOption()
         option.setFlags(QTextOption.ShowTabsAndSpaces | QTextOption.ShowLineAndParagraphSeparators)
         self.document().setDefaultTextOption(option)
