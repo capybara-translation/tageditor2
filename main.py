@@ -191,12 +191,10 @@ class KeyEventFilter(QObject):
     def eventFilter(self, obj: 'QObject', event: 'QEvent') -> bool:
         # print('eventFilter', event.type())
         if obj == self.widget and event.type() == QEvent.KeyPress:
-            # print(event.key())
             modifiers = QApplication.keyboardModifiers()
             if modifiers != QtCore.Qt.ShiftModifier and event.key() == Qt.Key_Return:
                 return True
-            if modifiers == QtCore.Qt.ShiftModifier and event.key() == Qt.Key_Enter:
-                self.widget.insertText(chr(LINE_SEPARATOR))
+            if modifiers != (QtCore.Qt.ShiftModifier | QtCore.Qt.KeypadModifier) and event.key() == Qt.Key_Enter:
                 return True
             # modifiers = QApplication.keyboardModifiers()
             # if modifiers == QtCore.Qt.ControlModifier and event.key() == Qt.Key_C:
@@ -271,8 +269,8 @@ class ExampleWindow(QWidget):
         self.insert_tag(cursor, '4', 'image', TagKind.EMPTY)
         self.tageditor.setTextCursor(cursor)
 
-        # self.key_event_filter = KeyEventFilter()
-        # self.key_event_filter.install_to(self.tageditor)
+        self.key_event_filter = KeyEventFilter()
+        self.key_event_filter.install_to(self.tageditor)
 
         # self.tageditor.currentCharFormatChanged.connect(self.on_character_format_change)
         # self.tageditor.selectionChanged.connect(self._trigger_obj_char_rescan)
