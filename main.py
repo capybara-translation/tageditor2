@@ -3,7 +3,8 @@ from enum import Enum, auto
 import uuid
 import pyperclip
 from PyQt5 import QtCore
-from PyQt5.QtGui import QPen, QColor, QBrush, QLinearGradient, QPainter, QPainterPath, QTextOption
+from PyQt5.QtGui import QPen, QColor, QBrush, QLinearGradient, QPainter, QPainterPath, QTextOption, \
+    QTextDocumentFragment
 from PyQt5.QtGui import QTextCursor
 from PyQt5.QtGui import QTextFormat
 from PyQt5.QtGui import QTextCharFormat
@@ -31,7 +32,7 @@ class TagKind(Enum):
 class TagTextEdit(QTextEdit):
     def __init__(self, parent=None):
         super(TagTextEdit, self).__init__(parent)
-        self.setAcceptRichText(True)
+        self.setAcceptRichText(False)
         # self.setStyleSheet(
         #     'font-family: Arial')
         option = QTextOption()
@@ -250,22 +251,20 @@ class ExampleWindow(QWidget):
         cursor = self.tageditor.textCursor()
 
         self.insert_tag(cursor, '1', 'image', TagKind.EMPTY)
-        cursor.insertText('start' + chr(LINE_SEPARATOR))
+        cursor.insertHtml('<span>start</span>')
 
-        cursor.insertText('\n\n')
         self.insert_tag(cursor, '1', 'bold', TagKind.START)
-        cursor.insertText('some bold text')
+        cursor.insertHtml('<span>some bold text</span>')
         self.insert_tag(cursor, '1', 'bold', TagKind.END)
 
         self.insert_tag(cursor, '2', 'italic', TagKind.START)
-        cursor.insertText('some italic text')
+        cursor.insertHtml('<span>some italic text</span>')
         self.insert_tag(cursor, '2', 'italic', TagKind.END)
 
         self.insert_tag(cursor, '3', 'underline', TagKind.START)
         self.insert_tag(cursor, '3', 'underline', TagKind.END)
 
-        cursor.insertText('\n\n')
-        cursor.insertText('end')
+        cursor.insertHtml('<span><br/><br/>end</span>')
         self.insert_tag(cursor, '4', 'image', TagKind.EMPTY)
         self.tageditor.setTextCursor(cursor)
 
