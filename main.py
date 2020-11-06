@@ -2,7 +2,7 @@
 from enum import Enum, auto
 import uuid
 import pyperclip
-from PyQt5 import QtCore
+from PyQt5 import QtCore, QtGui
 from PyQt5.QtGui import QPen, QColor, QBrush, QLinearGradient, QPainter, QPainterPath, QTextOption, \
     QTextDocumentFragment
 from PyQt5.QtGui import QTextCursor
@@ -34,11 +34,16 @@ class TagTextEdit(QTextEdit):
         self.is_undoing = False
         self.setAcceptRichText(False)
         # self.setUndoRedoEnabled(False)
-        # self.setStyleSheet(
-        #     'font-family: Arial')
         option = QTextOption()
         option.setFlags(QTextOption.ShowTabsAndSpaces | QTextOption.ShowLineAndParagraphSeparators)
         self.document().setDefaultTextOption(option)
+
+    def contextMenuEvent(self, e: QtGui.QContextMenuEvent) -> None:
+        menu = self.createStandardContextMenu()
+        for a in menu.actions():
+            if a.objectName() in ('edit-undo', 'edit-redo'):
+                menu.removeAction(a)
+        menu.exec_(e.globalPos())
 
     def canInsertFromMimeData(self, source: QtCore.QMimeData) -> bool:
         return source.hasText()
