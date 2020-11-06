@@ -8,7 +8,7 @@ from PyQt5.QtGui import QPen, QColor, QBrush, QLinearGradient, QPainter, QPainte
 from PyQt5.QtGui import QTextCursor
 from PyQt5.QtGui import QTextFormat
 from PyQt5.QtGui import QTextCharFormat
-from PyQt5.QtGui import QTextObjectInterface, QTextObject, QFontMetrics, QTextDocument
+from PyQt5.QtGui import QTextObjectInterface, QTextObject, QFontMetrics, QTextDocument, QKeySequence
 from PyQt5.QtCore import Qt
 from PyQt5.QtCore import QObject, QEvent, QMimeData, QRect, QRectF
 from PyQt5.QtWidgets import QWidget
@@ -16,7 +16,6 @@ from PyQt5.QtWidgets import QLineEdit, QPushButton, QLabel
 from PyQt5.QtWidgets import QTextEdit
 from PyQt5.QtWidgets import QVBoxLayout
 from PyQt5.QtWidgets import QApplication
-
 
 OBJECT_REPLACEMENT_CHARACTER = 0xfffc
 LINE_SEPARATOR = 0x2028
@@ -32,12 +31,22 @@ class TagKind(Enum):
 class TagTextEdit(QTextEdit):
     def __init__(self, parent=None):
         super(TagTextEdit, self).__init__(parent)
+        self.is_undoing = False
         self.setAcceptRichText(False)
+        # self.setUndoRedoEnabled(False)
         # self.setStyleSheet(
         #     'font-family: Arial')
         option = QTextOption()
         option.setFlags(QTextOption.ShowTabsAndSpaces | QTextOption.ShowLineAndParagraphSeparators)
         self.document().setDefaultTextOption(option)
+
+    def canInsertFromMimeData(self, source: QtCore.QMimeData) -> bool:
+        return source.hasText()
+
+    def insertFromMimeData(self, source: QtCore.QMimeData) -> None:
+        if source.hasText():
+            text = source.text().replace(chr(0xa), chr(LINE_SEPARATOR))
+            super().insertPlainText(text)
 
     # Called when a drag and drop operation is started, or when data is copied to the clipboard.
     def createMimeDataFromSelection(self) -> QtCore.QMimeData:
@@ -193,10 +202,16 @@ class KeyEventFilter(QObject):
         # print('eventFilter', event.type())
         if obj == self.widget and event.type() == QEvent.KeyPress:
             modifiers = QApplication.keyboardModifiers()
-            if modifiers != QtCore.Qt.ShiftModifier and event.key() == Qt.Key_Return:
+            key = event.key()
+            if modifiers != QtCore.Qt.ShiftModifier and key == Qt.Key_Return:
                 return True
-            if modifiers != (QtCore.Qt.ShiftModifier | QtCore.Qt.KeypadModifier) and event.key() == Qt.Key_Enter:
+            if modifiers != (QtCore.Qt.ShiftModifier | QtCore.Qt.KeypadModifier) and key == Qt.Key_Enter:
                 return True
+            if QKeySequence(modifiers | key).matches(QKeySequence.Undo):
+                # TODO: handle right-click undo
+                print('undo')
+                self.widget.is_undoing = True
+
             # modifiers = QApplication.keyboardModifiers()
             # if modifiers == QtCore.Qt.ControlModifier and event.key() == Qt.Key_C:
             #     print('ctrl+c')
@@ -296,12 +311,15 @@ class ExampleWindow(QWidget):
         cursor.insertText(chr(OBJECT_REPLACEMENT_CHARACTER), char_format)
 
     def on_text_changed(self):
+        if self.tageditor.is_undoing:
+            self.tageditor.is_undoing = False
+            return
         blocked = self.tageditor.blockSignals(True)
         self.tageditor.textCursor().beginEditBlock()
         doc = self.tageditor.document()
-        # doc.setPlainText(doc.toPlainText().replace(chr(0xa), chr(LINE_SEPARATOR)))
         pattern = QtCore.QRegExp(r'\{\d{1,2}\}|\{\d{1,2}>|<\d{1,2}\}')
         cursor = QTextCursor(doc)
+        # print('textChanged')
         while True:
             cursor = doc.find(pattern, cursor)
             if cursor.isNull():
