@@ -91,7 +91,7 @@ class TagTextEdit(QTextEdit):
                     if current_fragment.contains(pos):
                         char_format = current_fragment.charFormat()
                         # tag_name = char_format.property(TagTextObject.name_propid)
-                        substrings.append(TagTextObject.to_string(char_format))
+                        substrings.append(TagTextObject.stringify(char_format))
                         break
                     it += 1
             elif ord(char) in (LINE_SEPARATOR, PARAGRAPH_SEPARATOR):
@@ -151,7 +151,7 @@ class TagTextObject(QObject, QTextObjectInterface):
     kind_propid = 10002
 
     @staticmethod
-    def to_string(char_format: 'QTextCharFormat') -> str:
+    def stringify(char_format: 'QTextCharFormat') -> str:
         name: str = char_format.property(TagTextObject.name_propid)
         kind: TagKind = char_format.property(TagTextObject.kind_propid)
         if kind == TagKind.START:
