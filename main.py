@@ -362,7 +362,9 @@ class ExampleWindow(QWidget):
         blocked = self.tageditor.blockSignals(True)
         self.tageditor.textCursor().beginEditBlock()
         doc = self.tageditor.document()
-        pattern = QtCore.QRegExp(r'\{\d{1,2}\}|\{\d{1,2}>|<\d{1,2}\}')
+        # pattern = QtCore.QRegExp(r'\{\d{1,2}\}|\{\d{1,2}>|<\d{1,2}\}')
+        pattern = QtCore.QRegExp(r'\{\d{1,2}\}|\{\d{1,2}>|<\d{1,2}\}|\{j\}|\{[biu_^]+>|<[biu_^]+\}')
+        pattern.setMinimal(True)
         cursor = QTextCursor(doc)
         # print('textChanged')
         while True:
