@@ -17,6 +17,8 @@ from PyQt5.QtWidgets import QTextEdit
 from PyQt5.QtWidgets import QVBoxLayout
 from PyQt5.QtWidgets import QApplication
 
+from wordboundary import BoundaryHandler
+
 OBJECT_REPLACEMENT_CHARACTER = 0xfffc
 LINE_SEPARATOR = 0x2028
 PARAGRAPH_SEPARATOR = 0x2029
@@ -37,6 +39,14 @@ class TagTextEdit(QTextEdit):
         option = QTextOption()
         option.setFlags(QTextOption.ShowTabsAndSpaces | QTextOption.ShowLineAndParagraphSeparators)
         self.document().setDefaultTextOption(option)
+
+    # def mouseDoubleClickEvent(self, e: QtGui.QMouseEvent) -> None:
+    #     blocked = self.blockSignals(True)
+    #     super().mouseDoubleClickEvent(e)
+    #     self.blockSignals(False)
+    #     cursor = self.cursorForPosition(e.pos())
+    #     cursor.select(QTextCursor.LineUnderCursor)
+    #     self.setTextCursor(cursor)
 
     def contextMenuEvent(self, e: QtGui.QContextMenuEvent) -> None:
         menu = self.createStandardContextMenu()
@@ -61,9 +71,14 @@ class TagTextEdit(QTextEdit):
             return mime
         start_pos = cursor.selectionStart()
         end_pos = cursor.selectionEnd()
+        selected_text = self.to_model_data_in_range(start_pos, end_pos)
+        mime.setText(selected_text)
+        return mime
+
+    def to_model_data_in_range(self, start: int, end: int) -> str:
         doc = self.document()
         substrings = []
-        for pos in range(start_pos, end_pos):
+        for pos in range(start, end):
             char = doc.characterAt(pos)
             if ord(char) == OBJECT_REPLACEMENT_CHARACTER:
                 current_block = doc.findBlock(pos)
@@ -84,9 +99,14 @@ class TagTextEdit(QTextEdit):
             else:
                 substrings.append(char)
             # print(pos, len(char), char, hex(ord(char)))
-        selected_text = ''.join(substrings)
-        mime.setText(selected_text)
-        return mime
+        text = ''.join(substrings)
+        return text
+
+    def to_model_data(self) -> str:
+        start_pos = 0
+        end_pos = len(self.document().toPlainText())
+        text = self.to_model_data_in_range(start_pos, end_pos)
+        return text
 
     # def copy_selection_to_clipboard(self, cut=False):
     #     cursor = self.textCursor()
@@ -239,6 +259,10 @@ class MouseEventFilter(QObject):
         self.widget.installEventFilter(self)
 
     def eventFilter(self, obj: 'QObject', event: 'QEvent') -> bool:
+        if obj == self.widget and event.type() == QEvent.MouseButtonDblClick:
+            print('dblclick')
+            return True
+
         return QObject.eventFilter(self, obj, event)
 
 
@@ -260,10 +284,15 @@ class ExampleWindow(QWidget):
         self.zoomOutButton.setText('↓')
         self.zoomOutButton.clicked.connect(self.zoom_out)
 
+        self.printModelButton = QPushButton()
+        self.printModelButton.setText('To Model')
+        self.printModelButton.clicked.connect(self.print_model)
+
         layout = QVBoxLayout()
         layout.addWidget(self.tageditor)
         layout.addWidget(self.zoomInButton)
         layout.addWidget(self.zoomOutButton)
+        layout.addWidget(self.printModelButton)
         self.setLayout(layout)
 
         self.register_tag_type()
@@ -290,6 +319,10 @@ class ExampleWindow(QWidget):
 
         self.key_event_filter = KeyEventFilter()
         self.key_event_filter.install_to(self.tageditor)
+        # self.mouse_event_filter = MouseEventFilter()
+        # self.mouse_event_filter.install_to(self.tageditor.viewport())
+        self.mouse_event_filter = BoundaryHandler()
+        self.mouse_event_filter.install_textedit(self.tageditor)
 
         # self.tageditor.currentCharFormatChanged.connect(self.on_character_format_change)
         # self.tageditor.selectionChanged.connect(self._trigger_obj_char_rescan)
@@ -300,6 +333,13 @@ class ExampleWindow(QWidget):
 
     def zoom_out(self):
         self.tageditor.zoomOut(1)
+
+    def print_model(self):
+        data = self.tageditor.to_model_data()
+        print('===================')
+        print(data)
+        print('===================')
+        print('')
 
     def register_tag_type(self):
         document_layout = self.tageditor.document().documentLayout()
